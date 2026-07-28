@@ -2,19 +2,24 @@ import { useState } from 'react'
 import './App.css'
 
 function App() {
-  const [activeTab, setActiveTab] = useState('reverse') // 'reverse' ou 'direct'
+  const [activeTab, setActiveTab] = useState('reverse')
   
-  // Estados para o Gerador Reverso
+  // Estados do Gerador Reverso
   const [targetRating, setTargetRating] = useState('90')
   const [combinations, setCombinations] = useState([])
   const [loadingReverse, setLoadingReverse] = useState(false)
 
-  // Estados para a Calculadora Direta
+  // Estados do Fut.GG / Jogadores Sugeridos
+  const [selectedRating, setSelectedRating] = useState(null)
+  const [players, setPlayers] = useState([])
+  const [loadingPlayers, setLoadingPlayers] = useState(false)
+
+  // Estados da Calculadora Direta
   const [ratingsInput, setRatingsInput] = useState('')
   const [calculatedRating, setCalculatedRating] = useState(null)
   const [directError, setDirectError] = useState('')
 
-  // Função para agrupar as cartas repetidas e contar (Ex: [92, 91, 91] -> "1x 92, 2x 91")
+  // Resumo agrupado das cartas (Ex: "1x 92 • 2x 91")
   const formatRatingsSummary = (ratings) => {
     const counts = {}
     ratings.forEach((r) => {
@@ -22,28 +27,46 @@ function App() {
     })
 
     return Object.entries(counts)
-      .sort((a, b) => Number(b[0]) - Number(a[0])) // Ordena do maior para o menor overall
+      .sort((a, b) => Number(b[0]) - Number(a[0]))
       .map(([rating, count]) => `${count}x ${rating}`)
       .join('  •  ')
   }
 
-  // Busca as combinações para a nota alvo
+  // Busca combinações de notas no Backend Java
   const handleSearchCombinations = async (e) => {
     e.preventDefault()
     setLoadingReverse(true)
+    setSelectedRating(null)
 
     try {
       const response = await fetch(`http://localhost:8080/api/sbc/combinations/${targetRating}`)
       const data = await response.json()
       setCombinations(data)
     } catch (err) {
-      alert('Erro ao conectar com o backend. O Spring Boot está rodando na porta 8080?')
+      alert('Erro ao conectar com o backend Java na porta 8080.')
     } finally {
       setLoadingReverse(false)
     }
   }
 
-  // Calcula a nota exata do elenco digitado
+  // Busca opções de jogadores no Fut.GG via Backend
+  const fetchPlayersForRating = async (rating) => {
+    setSelectedRating(rating)
+    setLoadingPlayers(true)
+    setPlayers([])
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/sbc/players/${rating}`)
+      const data = await response.json()
+      setPlayers(data)
+    } catch (err) {
+      console.error('Erro ao buscar cartas do Fut.GG:', err)
+    } finally {
+      setLoadingPlayers(false)
+    }
+  }
+
+  // Calcula a nota exata do elenco inserido manualmente
   const handleCalculateDirect = async (e) => {
     e.preventDefault()
     setDirectError('')
@@ -78,10 +101,10 @@ function App() {
     <div style={{ fontFamily: 'Arial, sans-serif', maxWidth: '850px', margin: '40px auto', padding: '20px', color: '#1f2937' }}>
       <h1 style={{ textAlign: 'center', marginBottom: '10px' }}>⚽ EA Sports FC - SBC Calculator</h1>
       <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '30px' }}>
-        Ferramenta completa para otimizar seus Desafios de Montagem de Elenco.
+        Ferramenta para otimizar seus Desafios de Montagem de Elenco.
       </p>
 
-      {/* Navegação por Abas */}
+      {/* Navegação de Abas */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '30px' }}>
         <button
           onClick={() => setActiveTab('reverse')}
@@ -149,16 +172,57 @@ function App() {
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 10px 0' }}>
+                  💡 <i>Clique em qualquer número para ver sugestões de cartas do Fut.GG:</i>
+                </p>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {combo.ratings.map((rating, rIndex) => (
-                    <span key={rIndex} style={{ backgroundColor: '#2563eb', color: 'white', padding: '4px 10px', borderRadius: '4px', fontWeight: 'bold', fontSize: '13px' }}>
+                    <button
+                      key={rIndex}
+                      onClick={() => fetchPlayersForRating(rating)}
+                      style={{
+                        backgroundColor: selectedRating === rating ? '#1d4ed8' : '#2563eb',
+                        color: 'white',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        fontWeight: 'bold',
+                        fontSize: '14px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'transform 0.1s',
+                      }}
+                    >
                       {rating}
-                    </span>
+                    </button>
                   ))}
                 </div>
               </div>
             ))}
           </div>
+
+          {/* PAINEL DE SUGESTÕES DO FUT.GG */}
+          {selectedRating && (
+            <div style={{ marginTop: '30px', padding: '20px', border: '2px dashed #2563eb', borderRadius: '8px', backgroundColor: '#eff6ff' }}>
+              <h3 style={{ margin: '0 0 15px 0', color: '#1e40af' }}>
+                🃏 Sugestões de cartas com Overall {selectedRating} (Fut.GG)
+              </h3>
+
+              {loadingPlayers ? (
+                <p style={{ color: '#2563eb', fontWeight: 'bold' }}>Buscando melhores opções no Fut.GG...</p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+                  {players.map((player, pIndex) => (
+                    <div key={pIndex} style={{ backgroundColor: 'white', padding: '12px', borderRadius: '6px', border: '1px solid #bfdbfe', textAlign: 'center' }}>
+                      <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#1e293b' }}>{player.name}</div>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Pos: {player.position}</div>
+                      <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#059669', marginTop: '6px' }}>{player.price}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
