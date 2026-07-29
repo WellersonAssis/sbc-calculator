@@ -31,7 +31,7 @@ function App() {
     const excludeQuery = excludedArray.length > 0 ? `?exclude=${excludedArray.join(',')}` : ''
 
     try {
-      const response = await fetch(`http://localhost:8080/api/sbc/combinations/${targetRating}${excludeQuery}`)
+      const response = await fetch(`https://sbc-backend-fi6f.onrender.com/api/sbc/combinations/${targetRating}${excludeQuery}`)
       if (!response.ok) throw new Error('Erro na resposta do backend')
       
       const comboData = await response.json()
