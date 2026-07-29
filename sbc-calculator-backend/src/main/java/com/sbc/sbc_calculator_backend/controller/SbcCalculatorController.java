@@ -9,7 +9,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/sbc")
-@CrossOrigin(origins = "*")
+
 public class SbcCalculatorController {
 
     private final SbcCalculatorService calculatorService;
