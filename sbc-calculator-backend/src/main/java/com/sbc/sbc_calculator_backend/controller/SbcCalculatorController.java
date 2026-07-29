@@ -1,6 +1,5 @@
 package com.sbc.sbc_calculator_backend.controller;
 
-import com.sbc.sbc_calculator_backend.dto.SquadRequestDto;
 import com.sbc.sbc_calculator_backend.service.SbcCalculatorService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,15 +14,8 @@ public class SbcCalculatorController {
 
     private final SbcCalculatorService calculatorService;
 
-    // Construtor injetando apenas o serviço de cálculos
     public SbcCalculatorController(SbcCalculatorService calculatorService) {
         this.calculatorService = calculatorService;
-    }
-
-    @PostMapping("/calculate")
-    public ResponseEntity<Integer> calculateRating(@RequestBody SquadRequestDto request) {
-        int result = calculatorService.calculateSquadRating(request.getRatings());
-        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/combinations/{targetRating}")
@@ -31,7 +23,6 @@ public class SbcCalculatorController {
             @PathVariable int targetRating,
             @RequestParam(required = false) List<Integer> exclude
     ) {
-        // Agora passamos o "exclude" para o método que você já tinha
         return ResponseEntity.ok(calculatorService.getCombinationsForRating(targetRating, exclude));
     }
 }
