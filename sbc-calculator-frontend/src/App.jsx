@@ -4,49 +4,57 @@ import './App.css'
 function App() {
   const [activeTab, setActiveTab] = useState('reverse')
   
-  // Estados do Gerador Reverso
-  const [targetRating, setTargetRating] = useState('90')
+  const [targetRating, setTargetRating] = useState('89')
+  const [excludedRatingsInput, setExcludedRatingsInput] = useState('')
   const [combinations, setCombinations] = useState([])
   const [loading, setLoading] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false) // NOVO: Controle de exibição do filtro
 
-  // Estados da Calculadora Direta
   const [ratingsInput, setRatingsInput] = useState('')
   const [calculatedRating, setCalculatedRating] = useState(null)
   const [directError, setDirectError] = useState('')
 
-  // Agrupa e conta cartas (Ex: "1x 92 • 2x 91")
   const formatRatingsSummary = (ratings) => {
     if (!Array.isArray(ratings)) return ''
     const counts = {}
-    ratings.forEach((r) => {
-      counts[r] = (counts[r] || 0) + 1
-    })
-
+    ratings.forEach((r) => { counts[r] = (counts[r] || 0) + 1 })
     return Object.entries(counts)
       .sort((a, b) => Number(b[0]) - Number(a[0]))
       .map(([rating, count]) => `${count}x ${rating}`)
       .join('  •  ')
   }
 
-  // Busca apenas as combinações matemáticas no Backend
   const handleSearchCombinations = async (e) => {
     e.preventDefault()
     setLoading(true)
+    
+    // Limpa a lista na tela para dar o efeito visual de carregamento novo
     setCombinations([])
 
+    const excludedArray = excludedRatingsInput
+      .split(',')
+      .map((r) => parseInt(r.trim()))
+      .filter((r) => !isNaN(r))
+    
+    const excludeQuery = excludedArray.length > 0 ? `?exclude=${excludedArray.join(',')}` : ''
+
     try {
-      const response = await fetch(`http://localhost:8080/api/sbc/combinations/${targetRating}`)
+      const response = await fetch(`http://localhost:8080/api/sbc/combinations/${targetRating}${excludeQuery}`)
       if (!response.ok) throw new Error('Erro na resposta do backend')
+      
       const comboData = await response.json()
       setCombinations(comboData)
+      
+      // NOVO: Libera a exibição do filtro avançado após a primeira busca dar certo
+      setShowAdvanced(true)
+      
     } catch (err) {
-      alert('Erro ao conectar com o backend Java na porta 8080.')
+      alert('Erro ao conectar com o backend Java. Verifique se o servidor está rodando na porta 8080.')
     } finally {
       setLoading(false)
     }
   }
 
-  // Calculadora Direta
   const handleCalculateDirect = async (e) => {
     e.preventDefault()
     setDirectError('')
@@ -78,81 +86,72 @@ function App() {
   }
 
   return (
-    <div style={{ fontFamily: 'Arial, sans-serif', maxWidth: '800px', margin: '40px auto', padding: '20px', color: '#1f2937' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '10px' }}>⚽ EA Sports FC - SBC Calculator</h1>
-      <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '30px' }}>
-        Gerador de combinações exatas para Desafios de Montagem de Elenco.
-      </p>
+    <div className="app-container">
+      <h1 className="header-title">⚽ SBC Calculator</h1>
+      <p className="header-subtitle">Otimize seus elencos no EA Sports FC</p>
 
-      {/* Abas */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '30px' }}>
-        <button
+      <div className="tabs-container">
+        <button 
+          className={`tab-button ${activeTab === 'reverse' ? 'active' : ''}`}
           onClick={() => setActiveTab('reverse')}
-          style={{
-            padding: '10px 20px',
-            fontSize: '15px',
-            fontWeight: 'bold',
-            borderRadius: '6px',
-            border: 'none',
-            cursor: 'pointer',
-            backgroundColor: activeTab === 'reverse' ? '#2563eb' : '#e5e7eb',
-            color: activeTab === 'reverse' ? 'white' : '#374151',
-          }}
         >
           🔍 Gerador de Combinações
         </button>
-        <button
+        <button 
+          className={`tab-button ${activeTab === 'direct' ? 'active' : ''}`}
           onClick={() => setActiveTab('direct')}
-          style={{
-            padding: '10px 20px',
-            fontSize: '15px',
-            fontWeight: 'bold',
-            borderRadius: '6px',
-            border: 'none',
-            cursor: 'pointer',
-            backgroundColor: activeTab === 'direct' ? '#2563eb' : '#e5e7eb',
-            color: activeTab === 'direct' ? 'white' : '#374151',
-          }}
         >
           🧮 Calculadora de Elenco
         </button>
       </div>
 
-      {/* ABA 1: GERADOR REVERSO */}
       {activeTab === 'reverse' && (
         <div>
-          <form onSubmit={handleSearchCombinations} style={{ textAlign: 'center', marginBottom: '30px' }}>
-            <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
-              Digite a nota mínima exigida pelo DME:
-            </label>
+          <form onSubmit={handleSearchCombinations} className="form-container">
+            <label className="input-label">Overall do DME:</label>
             <input
               type="number"
+              className="styled-input"
               value={targetRating}
               onChange={(e) => setTargetRating(e.target.value)}
               placeholder="Ex: 90"
               min="45"
               max="99"
-              style={{ padding: '10px', width: '100px', fontSize: '18px', textAlign: 'center', borderRadius: '6px', border: '1px solid #d1d5db', marginRight: '10px' }}
+              style={{ width: '100px', marginBottom: '15px' }}
             />
-            <button
-              type="submit"
-              style={{ padding: '11px 24px', fontSize: '16px', cursor: 'pointer', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}
-            >
-              {loading ? 'Calculando...' : 'Buscar Combinações'}
+            
+            {/* NOVO: Só exibe essa parte se showAdvanced for true */}
+            {showAdvanced && (
+              <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #334155' }}>
+                <label className="input-label">Cartas que você NÃO tem (separadas por vírgula):</label>
+                <input
+                  type="text"
+                  className="styled-input"
+                  value={excludedRatingsInput}
+                  onChange={(e) => setExcludedRatingsInput(e.target.value)}
+                  placeholder="Ex: 88, 87, 86"
+                  style={{ width: '80%', maxWidth: '350px' }}
+                />
+              </div>
+            )}
+            <br /><br />
+
+            <button type="submit" className="action-button" style={{ marginLeft: 0 }} disabled={loading}>
+              {loading ? 'Calculando...' : (showAdvanced ? 'Recalcular com Filtro' : 'Buscar Combinações')}
             </button>
           </form>
 
-          {loading && (
-            <p style={{ textAlign: 'center', color: '#2563eb', fontWeight: 'bold' }}>
-              ⏳ Gerando as melhores combinações matemáticas...
-            </p>
-          )}
+          {loading && <p className="loading-text">⏳ Mapeando as melhores opções...</p>}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          <div className="results-container">
+            {combinations.length === 0 && showAdvanced && !loading && (
+              <p className="error-text" style={{textAlign: 'center'}}>Nenhuma combinação encontrada excluindo essas notas.</p>
+            )}
+            
             {combinations.map((combo, index) => (
-              <div key={index} style={{ border: '1px solid #d1d5db', borderRadius: '8px', padding: '20px', backgroundColor: '#ffffff', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, color: '#111827', fontSize: '16px' }}>{combo.title}</h3>
-                <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#2563eb', backgroundColor: '#dbeafe', padding: '8px 16px', borderRadius: '20px' }}>
+              <div key={index} className="combo-card">
+                <h3 className="combo-title">{combo.title}</h3>
+                <span className="combo-badge">
                   {formatRatingsSummary(combo.ratings)}
                 </span>
               </div>
@@ -161,41 +160,31 @@ function App() {
         </div>
       )}
 
-      {/* ABA 2: CALCULADORA DIRETA */}
       {activeTab === 'direct' && (
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ fontWeight: 'bold', marginBottom: '15px' }}>
-            Digite as notas dos jogadores do seu clube (separadas por vírgula):
-          </p>
+        <div className="form-container">
+          <label className="input-label">Digite as notas do seu clube (separadas por vírgula):</label>
           <form onSubmit={handleCalculateDirect}>
             <input
               type="text"
+              className="styled-input"
               value={ratingsInput}
               onChange={(e) => setRatingsInput(e.target.value)}
               placeholder="Ex: 88, 87, 85, 84, 83"
-              style={{ padding: '12px', width: '320px', fontSize: '16px', borderRadius: '6px', border: '1px solid #d1d5db', marginRight: '10px' }}
+              style={{ width: '80%', maxWidth: '350px', marginBottom: '15px' }}
             />
-            <button
-              type="submit"
-              style={{ padding: '12px 20px', fontSize: '16px', cursor: 'pointer', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}
-            >
+            <br />
+            <button type="submit" className="action-button" style={{ marginLeft: 0 }}>
               Calcular Overall
             </button>
           </form>
 
           {calculatedRating !== null && (
-            <div style={{ marginTop: '30px', padding: '20px', backgroundColor: '#ecfdf5', borderRadius: '8px', border: '1px solid #a7f3d0' }}>
-              <span style={{ fontSize: '24px', color: '#047857', fontWeight: 'bold' }}>
-                ⭐ Overall do Elenco: {calculatedRating}
-              </span>
+            <div className="result-box">
+              <span className="result-text">⭐ Overall do Elenco: {calculatedRating}</span>
             </div>
           )}
 
-          {directError && (
-            <div style={{ marginTop: '20px', color: '#ef4444', fontWeight: 'bold' }}>
-              {directError}
-            </div>
-          )}
+          {directError && <div className="error-text">{directError}</div>}
         </div>
       )}
     </div>
