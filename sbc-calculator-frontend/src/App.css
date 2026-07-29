@@ -1,9 +1,14 @@
 body {
-  background-color: #0f172a;
-  color: #f8fafc;
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   margin: 0;
   padding: 0;
+  
+  background-image: url('./assets/Fundo.jpg');
+  background-size: 100% auto; 
+  background-position: center top;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-color: #0f172a;
 }
 
 #root {
@@ -16,14 +21,12 @@ body {
   width: 100%;
   max-width: 800px;
   margin: 40px auto;
-  padding: 20px;
+  padding: 30px;
   box-sizing: border-box;
-}
-
-.app-container {
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 20px;
+  background-color: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 .header-title {
